@@ -1,148 +1,34 @@
-name: myapp
+# This file sets some good defaults for local development using this Platform.sh
+# template with Lando.
+#
+# Note that you should not edit this file so it can continue to receive upstream
+# updates. If you wish to change the values below then override them in your
+# normal .lando.yml.
 
-# Start with the Drupal 8 recipe
-recipe: drupal8
+# These both allow you to test this template without needing a site on Platform.sh
+# However you will want to replace them in your .lando.yml
+name: platformsh-drupal8-multisite
+recipe: platformsh
 
-# Configure the D8 recipe to match up closer to a vanilla platform.sh stack
 config:
-  # Lando defaults to Apache. Switch to nginx to match Platform.sh.
-  via: nginx
-  # Set the webroot to match .platform.app.yaml.
-  webroot: drupal/web
-  # Set this to match the version in .platform.app.yaml.
-  php: 7.3
-  # Lando defaults to the latest MySQL release, but Platform.sh uses MariaDB.
-  # Specify the version to match what's in services.yaml.
-  database: mariadb:10.2
 
-# Loads local environment variables
-env_file:
-  - drupal/.env
+  # This section overrides Platform.sh configuration with values that make more
+  # sense for local development.
+  #
+  # Note that "app" is the name of the application defined in your
+  # .platform.app.yaml or applications.yaml.
+  overrides:
+    app:
+      variables:
+        d8config:
+          "system.file:path:temporary": "/tmp"
+        d8settings:
+          "skip_permissions_hardening": 1
 
-services:
-  appserver:
-    build:
-      # The following build step will install the Platform CLI in the application container
-      - "mkdir -p /var/www/.platformsh/bin"
-      - "curl -fsSL -o /var/www/.platformsh/bin/platform https://github.com/platformsh/platformsh-cli/releases/download/v3.49.0/platform.phar"
-      - "chmod ug+x /var/www/.platformsh/bin/platform"
-      # Lando currently ships with composer 1.8, but Drupal 8.8.0 requires composer 1.9
-      - "composer self-update"
-      - "cd /app/drupal && COMPOSER_PROCESS_TIMEOUT=600 composer install"
-    overrides:
-      environment:
-        PLATFORMSH_PROJECT_ID: "YourProjectID"
-        DRUSH_OPTIONS_URI: "https://mycms.lndo.site"
 
-  nodejs:
-    type: node
-    # Don't waste time checking for an active URL. Isn't active until `lando develop` is run.
-    scanner: false
-    overrides:
-      ports:
-        - 8000:8000
-      environment:
-        GATSBY_WEBPACK_PUBLICPATH: "https://mydev.lndo.site"
-    globals:
-      gatsby-cli: "latest"
-      yarn: "latest"
-    run:
-      - echo "Installing Gatsby..."
-      - cd gatsby && yarn install
-
-proxy:
-  appserver_nginx:
-    - mycms.lndo.site
-  nodejs:
-    - mydev.lndo.site:8000
-
+# These are tools that are commonly used during development for this template.
 tooling:
-  npm:
-    service: nodejs
-  node:
-    service: nodejs
-  yarn:
-    service: nodejs
-  gatsby:
-    service: nodejs
-
-  develop:
-    service: nodejs
-    description: Start Gatsby development server.
-    cmd:
-      - cd $LANDO_MOUNT/gatsby && gatsby develop --host 0.0.0.0
-
-  # Creates a `lando platform` command that will run any
-  # Platform CLI command from inside the container if desired.
-  platform:
-    service: appserver
-    description: Run Platform CLI commands
-    cmd: /var/www/.platformsh/bin/platform
-
-  # Custom Tooling
-  install:
-    description: Install project dependencies
-    cmd:
-      # Install dependencies
-      - appserver: cd /app/drupal && COMPOSER_PROCESS_TIMEOUT=600 composer install
-
-  db-dl:
-    service: appserver
-    description: Download the latest db from the "develop" environment
-    cmd:
-      - appserver: cd /app/drupal && /var/www/.platformsh/bin/platform db:dump --gzip --environment=develop --file=db_dump.sql.gz --yes
-      - appserver: echo && echo $(echo Downloaded database. Use \"lando db-reset\" to import.)
-
-  db-reset:
-    description: Reset the Drupal environment
-    cmd:
-    - database: cd /app/drupal && /helpers/sql-import.sh $(ls -t *.sql.zip -t *.sql.gz -t *.mysql.gz | head -n1)
-    - appserver: cd /app/drupal && /app/drupal/vendor/bin/drush cache:rebuild
-    - appserver: cd /app/drupal && /app/drupal/vendor/bin/drush updatedb --yes
-    - appserver: cd /app/drupal && /app/drupal/vendor/bin/drush config:import --yes
-    - appserver: cd /app/drupal && /app/drupal/vendor/bin/drush config:import --yes
-    - appserver: cd /app/drupal && /app/drupal/vendor/bin/drush cache:rebuild
-    - appserver: cd /app/drupal && /app/drupal/vendor/bin/drush user:login
-
-  drush-alias:
-    description: Downloads Drush aliases for this project
-    cmd:
-      # Get Drush aliases
-      - appserver: /var/www/.platformsh/bin/platform drush-alias
-
-  xdebug-on:
-    service: appserver
-    description: Enable xdebug for nginx.
-    cmd: docker-php-ext-enable xdebug && pkill -o -USR2 php-fpm
-    user: root
-
-  xdebug-off:
-    service: appserver
-    description: Disable xdebug for nginx.
-    cmd: rm /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && pkill -o -USR2 php-fpm
-    user: root
-
-# Excludes rarely edited directories / files from sync to win performance.
-# Copy and uncomment this "excludes" section into a .lando.local.yml file in
-# the project root to gain all the benefits.
-#
-# excludes:
-#   - drupal/drush
-#   - drupal/vendor
-#   - drupal/web/core
-#   - drupal/web/modules/contrib
-#   - drupal/web/profiles/contrib
-#   - drupal/web/sites/default/files
-#   - drupal/web/themes/contrib
-
-# If you would like to generally exclude a specific directory but want host
-# access to a specific subdirectory, such as when debugging a contrib module,
-# you may add that path to the list of excludes with a preceding exclamation
-# point. The example excludes definition below excludes Drupal's contrib
-# modules from syncing, but will sync the webform module directory.
-#
-# excludes:
-#   - drupal/web/modules/contrib
-#   - "!drupal/web/modules/contrib/webform"
-#
-# *Wrap it in quotes so the yaml validates.
+  drush:
+    service: app
+  drupal:
+    service: app
