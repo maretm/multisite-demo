@@ -10,19 +10,3 @@
     type: redirect
     to: "https://default}/"
 
-"https://first.{default}/":
-    type: upstream
-    id: 'blue'
-    upstream: "app:http"
-    cache:
-        enabled: true
-        # Base the cache on the session cookie and custom Drupal cookies. Ignore all other cookies.
-        cookies: ['/^SS?ESS/', '/^Drupal.visitor/']
-
-"https://second.{default}/":
-    type: upstream
-    upstream: "app:http"
-    cache:
-        enabled: true
-        # Base the cache on the session cookie and custom Drupal cookies. Ignore all other cookies.
-        cookies: ['/^SS?ESS/', '/^Drupal.visitor/']
