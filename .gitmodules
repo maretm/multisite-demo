@@ -1,3 +1,6 @@
 [submodule "web/sites/fourth"]
 	path = web/sites/fourth
 	url = https://github.com/maretm/multisite-fourth
+[submodule "web/sites/third"]
+	path = web/sites/third
+	url = https://github.com/maretm/multi-third
