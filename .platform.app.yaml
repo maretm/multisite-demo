@@ -27,6 +27,8 @@ relationships:
     rediscache: 'cache:redis'
     first: 'db:first'
     second: 'db:second'
+    third: 'db:third'
+    fourth: 'db:fourth'
 
 # The size of the persistent disk of the application (in MB).
 disk: 2048
@@ -73,7 +75,15 @@ hooks:
     # The build hook runs after Composer to finish preparing up your code.
     # No services are available but the disk is writeable.
     build: |
-        set -e
+      source:
+        operations:
+          update:
+            command: |
+              set -e
+              composer update
+              git add composer.lock
+              git commit -m "Update Composer dependencies"
+              git submodule foreach git pull origin master
     # The deploy hook runs after your application has been deployed and started.
     # Code cannot be modified at this point but the database is available.
     # The site is not accepting requests while this script runs so keep it
